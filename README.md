@@ -1,5 +1,10 @@
 # unsuperior-ai-waifu
-[See article](https://hackdaddy.dev/blog/unsuperior-ai-waifu/)
+
+Neuro-sama knockoff that runs completely in your browser. Should run on anything, but the page layout is janky on anything but a mobile phone.
+
+## How to use
+[See article for easy way](https://hackdaddy.dev/blog/unsuperior-ai-waifu/)
+You need to give the page a bunch of API keys to use through GET variables.
 | GET Param     |                                                                                                                                       | Required? |
 |---------------|---------------------------------------------------------------------------------------------------------------------------------------|-----------|
 | openai        | Your OpenAI API key                                                                                                                   | yes       |
