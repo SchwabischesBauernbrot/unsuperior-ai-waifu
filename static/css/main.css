@@ -1,0 +1,122 @@
+@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@600&display=swap');
+
+.overlay{
+    opacity:0.8;
+    background-color:#ccc;
+    position:fixed;
+    width:100%;
+    height:100%;
+    top:0px;
+    left:0px;
+    z-index:1000;
+}
+
+html, body {
+    margin: 0px;
+    padding: 0px;
+    height: 100vh;
+}
+
+@media only screen and (min-width: 600px) {
+    body {
+        padding: 32px;
+        height: auto;
+    }
+}
+
+.flex-container {
+    display: flex;
+    flex-wrap: nowrap;
+}
+
+.flex-container>div {
+    width: auto;
+    line-height: 75px;
+    margin-right: 10px;
+    margin-left: 10px;
+    font-size: 30px;
+}
+
+@media only screen and (max-width: 600px) {
+    .desktop-only {
+        display: none;
+    }
+
+    .flex-container>div {
+        margin: 0px;
+    }
+
+    .showO .img-container {
+        background-repeat: no-repeat;
+        background-position: top left;
+        background-size: auto;
+        overflow: hidden;
+
+    }
+
+    .img-container img {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+    }
+}
+
+.memories-section {
+    background-color: plum;
+    border-radius: 16px;
+    flex-grow: 8;
+    padding: 32px;
+}
+
+.polkadot-background {
+    background-image: radial-gradient(#DB7093 20%, transparent 20%),
+        radial-gradient(#fafafa 20%, transparent 20%);
+    background-color: pink;
+    background-position: 0 0, 50px 50px;
+    background-size: 100px 100px;
+}
+
+.ui {
+    position: absolute;
+    bottom: 16px;
+    width: 100vw;
+}
+
+.nametag {
+    background-color: whitesmoke;
+    border-radius: 10px 10px 0px 0px;
+    padding: 8px;
+    width: fit-content;
+    font-size: 24px;
+    margin-left: 16px;
+    margin-bottom: -8px;
+    text-transform: capitalize;
+}
+
+.textbox {
+    width: 90%;
+    padding: 16px;
+    margin-left: auto;
+    margin-right: auto;
+
+    border-style: groove;
+    border-width: 7px;
+    border-radius: 8px;
+    border-color: white;
+
+    font-family: 'Kanit', sans-serif;
+    font-size: 32px;
+    color: #fff;
+    text-shadow: 2px 0 0 #000, 0 -1px 0 #000, 0 1px 0 #000, -1px 0 0 #000;
+}
+
+#transcription {
+    max-height: 15vh;
+    overflow-y: scroll;
+}
+
+#name-label {
+    padding: 16px 32px;
+    margin-bottom: 4px;
+    width: fit-content;
+}
