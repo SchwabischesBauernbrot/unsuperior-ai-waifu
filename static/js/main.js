@@ -49,7 +49,51 @@ function pushInteraction(prompt, response) {
     interactions.push(`Me: ${prompt}\nYou: ${response}`)
 }
 
-function tap(onStartListening, onLoading, onResults, onStartTalking) {
+function interact(synthesizer, userAction, onResults, onStartTalking) {
+    const visemeAcc = [];
+    synthesizer.visemeReceived = function (s, e) {
+        visemeAcc.push(e);
+    };
+
+    var prompt = buildPrompt(userAction);
+    openAIAPICompletionReq(openAIKey, prompt, function (response) {
+        pushInteraction(userAction, response);
+        disabled = false;
+
+        $name_label.text(waifuName);
+        $transcription.text(response);
+
+        // Try get emotion
+        emotionAnalysis(openAIKey, response, (emotion) => {
+            var data = {
+                "response": response,
+                "emotion": emotion,
+            };
+            onResults(data);
+
+            var ssml = createSsml(response, voice, emotion);
+            // Text to speech
+            synthesizer.speakSsmlAsync(
+                ssml,
+                function (result) {
+                    if (result.reason === SpeechSDK.ResultReason.Canceled) {
+                        console.log("synthesis failed. Error detail: " + result.errorDetails + "\n");
+                    }
+                    onStartTalking(visemeAcc);
+                    synthesizer.close();
+                    synthesizer = undefined;
+                },
+                function (err) {
+                    window.console.log(err);
+                    synthesizer.close();
+                    synthesizer = undefined;
+                }
+            );
+        });
+    });
+}
+
+function voiceEvent(onStartListening, onLoading, onResults, onStartTalking) {
     if (disabled) {
         return;
     } else {
@@ -63,11 +107,6 @@ function tap(onStartListening, onLoading, onResults, onStartTalking) {
 
     synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig);
 
-    const visemeAcc = [];
-    synthesizer.visemeReceived = function (s, e) {
-        visemeAcc.push(e);
-    };
-
     recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
     recognizer.recognizing = (s, e) => {
         $transcription.text(e.result.text);
@@ -79,44 +118,7 @@ function tap(onStartListening, onLoading, onResults, onStartTalking) {
             onLoading()
             $transcription.text(result.text);
 
-            var prompt = buildPrompt(result.text);
-
-            // Get response from openAI
-            openAIAPICompletionReq(openAIKey, prompt, function (response) {
-                pushInteraction(result.text, response);
-                disabled = false;
-
-                $name_label.text(waifuName);
-                $transcription.text(response);
-
-                // Try get emotion
-                emotionAnalysis(openAIKey, response, (emotion) => {
-                    var data = {
-                        "response": response,
-                        "emotion": emotion,
-                    };
-                    onResults(data);
-
-                    var ssml = createSsml(response, voice, emotion);
-                    // Text to speech
-                    synthesizer.speakSsmlAsync(
-                        ssml,
-                        function (result) {
-                            if (result.reason === SpeechSDK.ResultReason.Canceled) {
-                                console.log("synthesis failed. Error detail: " + result.errorDetails + "\n");
-                            }
-                            onStartTalking(visemeAcc);
-                            synthesizer.close();
-                            synthesizer = undefined;
-                        },
-                        function (err) {
-                            window.console.log(err);
-                            synthesizer.close();
-                            synthesizer = undefined;
-                        }
-                    );
-                });
-            });
+            interact(synthesizer, result.text, onResults, onStartTalking);
 
             recognizer.close();
             recognizer = undefined;
@@ -160,8 +162,8 @@ function tap(onStartListening, onLoading, onResults, onStartTalking) {
     model.scale.set(0.5);
     model.x = -100;
 
-    function tapImpl() {
-        tap(function () {
+    $transcription.click(function () {
+        voiceEvent(function () {
             model.internalModel.motionManager.expressionManager.setExpression(0);
         }, function () {
 
@@ -177,7 +179,35 @@ function tap(onStartListening, onLoading, onResults, onStartTalking) {
                 }, e.audioOffset / 10000 - (Date.now() - start));
             }
         })
-    }
+    });
 
-    $transcription.click(tapImpl)
+    model.on('hit', (hitAreaNames) => {
+        if (disabled) {
+            return;
+        } else {
+            disabled = true;
+        }
+        synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig);
+        const visemeAcc = [];
+        synthesizer.visemeReceived = function (s, e) {
+            visemeAcc.push(e);
+        };
+        $name_label.text(username + ":");
+        let poke = `*pokes your ${hitAreaNames[0]}*`;
+        $transcription.text(poke);
+        interact(synthesizer, poke,
+            function (data) {
+                var emotion = data["emotion"];
+                model.internalModel.motionManager.expressionManager.setExpression(emotion2ModelExpression(emotion));
+            }, function (visemes) {
+                // Makes her mouth move according to the visemes
+                var start = Date.now();
+                for (let e of visemes) {
+                    setTimeout(() => {
+                        setViseme(model, e.visemeId)
+                    }, e.audioOffset / 10000 - (Date.now() - start));
+                }
+            }
+        );
+    });
 })();

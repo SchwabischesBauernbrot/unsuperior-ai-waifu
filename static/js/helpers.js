@@ -143,7 +143,6 @@ Ekman emotion: `;
         }),
         success: function (data) {
             let res = data.choices[0].text.trim().toLowerCase();
-            console.log(res);
             if (!["neutral", "joy", "sadness", "anger", "disgust", "surprise"].includes(res)) {
                 res = "neutral";
             }
