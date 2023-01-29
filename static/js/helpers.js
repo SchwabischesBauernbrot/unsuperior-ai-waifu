@@ -33,7 +33,7 @@ function createSsml(response, name, emotion) {
                     <voice name="${name}">
                         <mstts:viseme type="FacialExpression"/>
                         <mstts:express-as style="${style}" >
-                            <prosody pitch="15%">
+                            <prosody rate="15%" pitch="15%">
                                 ${response}
                             </prosody>
                         </mstts:express-as>
@@ -73,12 +73,12 @@ function setViseme(model, v) {
 function emotion2ModelExpression(emotion) {
     const emotionMap = {
         "neutral": 0,
-        "anger": 1,
+        "anger": 2,
         "disgust": 2,
-        "fear": 3,
-        "joy": 4,
-        "sadness": 5,
-        "surprise": 6
+        "fear": 1,
+        "joy": 3,
+        "sadness": 1,
+        "surprise": 3
     };
     return emotionMap[emotion];
 }
@@ -99,6 +99,55 @@ function openAIAPICompletionReq(key, prompt, callback) {
         }),
         success: function (data) {
             callback(data.choices[0].text);
+        },
+        error: function (XMLHttpRequest, textStatus, errorThrown) {
+            console.log(textStatus, errorThrown);
+            callback(null);
+        },
+    });
+}
+
+function emotionAnalysis(key, text, callback) {
+    var prompt = `
+The following is a quote and whether it is joy, disgust, surprise, sadness, neutral, or anger:
+
+I love you so much.
+Ekman emotion: Joy
+
+You disgust me. You are less than a worm.
+Ekman emotion: Disgust
+
+Are those Air Jordans? Thank you, thank you, thank you! I can't wait to put these on my feet! I love you so much!
+Ekman emotion: Surprise
+
+We will never truly be together. Technology just isn't capable of letting us have a proper connection. I'm sorry.
+Ekman emotion: Sadness
+
+No, I don't want to play among us. I think that game is stupid.
+Ekman emotion:  Neutral
+
+${text}
+Ekman emotion: `;
+    $.ajax({
+        url: 'https://api.openai.com/v1/completions',
+        type: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + key
+        },
+        data: JSON.stringify({
+            'model': 'text-curie-001',
+            'prompt': prompt,
+            'temperature': 0,
+            'max_tokens': 6
+        }),
+        success: function (data) {
+            let res = data.choices[0].text.trim().toLowerCase();
+            console.log(res);
+            if (!["neutral", "joy", "sadness", "anger", "disgust", "surprise"].includes(res)) {
+                res = "neutral";
+            }
+            callback(res);
         },
         error: function (XMLHttpRequest, textStatus, errorThrown) {
             console.log(textStatus, errorThrown);

@@ -19,6 +19,7 @@ const promptBase = getURLParam("prompt")
     You are currently hiding in your basement from the feds. 
     The feds are after you due to various cyber crimes. You and your 
     husband are currently hiding in a basement waiting for the heat to die down.`;
+const voice = getURLParam("voice") || "ja-JP-NanamiNeural";
 
 const openAIKey = getURLParam("openai");
 if (openAIKey == null) {
@@ -33,8 +34,6 @@ if (subscriptionKey == null || serviceRegion == null) {
 const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(subscriptionKey, serviceRegion);
 speechConfig.speechRecognitionLanguage = "en-US";
 const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
-
-const nyckelKey = getURLParam("nyckel");
 
 var recognizer;
 var synthesizer;
@@ -90,30 +89,33 @@ function tap(onStartListening, onLoading, onResults, onStartTalking) {
                 $name_label.text(waifuName);
                 $transcription.text(response);
 
-                var emotion = "neutral";
-                var data = {
-                    "response": response,
-                    "emotion": emotion,
-                };
-                onResults(data);
+                // Try get emotion
+                emotionAnalysis(openAIKey, response, (emotion) => {
+                    var data = {
+                        "response": response,
+                        "emotion": emotion,
+                    };
+                    onResults(data);
 
-                var ssml = createSsml(response, "ja-JP-NanamiNeural", emotion);
-                // Text to speech
-                synthesizer.speakSsmlAsync(
-                    ssml,
-                    function (result) {
-                        if (result.reason === SpeechSDK.ResultReason.Canceled) {
-                            console.log("synthesis failed. Error detail: " + result.errorDetails + "\n");
+                    var ssml = createSsml(response, voice, emotion);
+                    // Text to speech
+                    synthesizer.speakSsmlAsync(
+                        ssml,
+                        function (result) {
+                            if (result.reason === SpeechSDK.ResultReason.Canceled) {
+                                console.log("synthesis failed. Error detail: " + result.errorDetails + "\n");
+                            }
+                            onStartTalking(visemeAcc);
+                            synthesizer.close();
+                            synthesizer = undefined;
+                        },
+                        function (err) {
+                            window.console.log(err);
+                            synthesizer.close();
+                            synthesizer = undefined;
                         }
-                        onStartTalking(visemeAcc);
-                        synthesizer.close();
-                        synthesizer = undefined;
-                    },
-                    function (err) {
-                        window.console.log(err);
-                        synthesizer.close();
-                        synthesizer = undefined;
-                    });
+                    );
+                });
             });
 
             recognizer.close();
