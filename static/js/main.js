@@ -6,6 +6,8 @@ const modelURL =
  * This sound helps make people wait for it to start transcripting.
 */
 const startListeningAudioElement = new Audio("static/media/startListening.mp3");
+const pokeAudioElement = new Audio("static/media/poke.mp3");
+const bonkAudioElement = new Audio("static/media/bonk.mp3");
 
 var $name_label, $transcription;
 
@@ -186,6 +188,11 @@ function voiceEvent(onStartListening, onLoading, onResults, onStartTalking) {
             return;
         } else {
             disabled = true;
+        }
+        if (hitAreaNames[0] == "head") {
+            bonkAudioElement.play();
+        } else {
+            pokeAudioElement.play();
         }
         synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig);
         const visemeAcc = [];
