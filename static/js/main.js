@@ -97,7 +97,7 @@ function tap(onStartListening, onLoading, onResults, onStartTalking) {
                 };
                 onResults(data);
 
-                var ssml = createSsml(response, "en-US-JennyNeural", emotion);
+                var ssml = createSsml(response, "ja-JP-NanamiNeural", emotion);
                 // Text to speech
                 synthesizer.speakSsmlAsync(
                     ssml,

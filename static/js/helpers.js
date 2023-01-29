@@ -30,10 +30,10 @@ function emotion2SsmlStyle(emotion) {
 function createSsml(response, name, emotion) {
     var style = emotion2SsmlStyle(emotion);
     return `<speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="en-US">
-                    <voice name="en-US-JennyNeural">
+                    <voice name="${name}">
                         <mstts:viseme type="FacialExpression"/>
                         <mstts:express-as style="${style}" >
-                            <prosody rate="17%" pitch="7%">
+                            <prosody pitch="15%">
                                 ${response}
                             </prosody>
                         </mstts:express-as>
