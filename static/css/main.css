@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@600&display=swap');
 
-.overlay{
+.overlay {
     opacity:0.8;
     background-color:#ccc;
     position:fixed;
@@ -14,14 +14,7 @@
 html, body {
     margin: 0px;
     padding: 0px;
-    height: 100vh;
-}
-
-@media only screen and (min-width: 600px) {
-    body {
-        padding: 32px;
-        height: auto;
-    }
+    overflow: hidden;
 }
 
 .flex-container {
@@ -79,7 +72,8 @@ html, body {
 .ui {
     position: absolute;
     bottom: 16px;
-    width: 100vw;
+    width: 90%;
+    margin-left: 5%;
 }
 
 .nametag {
@@ -88,7 +82,7 @@ html, body {
     padding: 8px;
     width: fit-content;
     font-size: 24px;
-    margin-left: 16px;
+    margin-left: 8%;
     margin-bottom: -8px;
     text-transform: capitalize;
 }

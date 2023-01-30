@@ -148,7 +148,6 @@ function voiceEvent(onStartListening, onLoading, onResults, onStartTalking) {
     }
 
     // Waifu stuff
-
     const app = new PIXI.Application({
         view: document.getElementById("canvas"),
         autoStart: true,
@@ -161,8 +160,12 @@ function voiceEvent(onStartListening, onLoading, onResults, onStartTalking) {
 
     app.stage.addChild(model);
 
-    model.scale.set(0.5);
-    model.x = -100;
+    function resizeWaifu() {
+        model.scale.set(window.innerHeight / 1280 * .8);
+        model.x = (window.innerWidth - 500) / 2;
+    }
+    resizeWaifu();
+    onresize = (_) => resizeWaifu();
 
     $transcription.click(function () {
         voiceEvent(function () {
