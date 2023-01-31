@@ -154,3 +154,5 @@ Ekman emotion: `;
         },
     });
 }
+
+export { createSsml, getURLParam, setViseme, emotion2ModelExpression, openAIAPICompletionReq, emotionAnalysis };

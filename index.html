@@ -6,6 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="static/css/main.css" rel="stylesheet" />
+    <link href="static/css/overlay.css" rel="stylesheet" />
     <title>USAW</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -19,10 +20,20 @@
     <script src="https://cdn.jsdelivr.net/npm/pixi.js@6.5.2/dist/browser/pixi.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display/dist/index.min.js"></script>
 
-    <div class="overlay">
+    <div id="overlay" class="overlay">
+        <a href="https://hackdaddy.dev/blog/unsuperior-ai-waifu/">Unsuperior AI Waifu</a>
         <h2>
-            By continuing, you are a loser.
+            How to use
         </h2>
+        <ul>
+            <li>Drag your finger around to make her move her head.</li>
+            <li>Poke her body. She'll probably get mad though.</li>
+            <li>Tap the textbox at the bottom to speak with her.</li>
+        </ul>
+        <button id="start-button" type="button">Yessir</button>
+        <div id="warning">
+
+        </div>
     </div>
     <canvas id=canvas></canvas>
     <div class="ui">
@@ -33,8 +44,7 @@
     </div>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
     <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
-    <script src="static/js/helpers.js"></script>
-    <script src="static/js/main.js"></script>
+    <script type="module" src="static/js/main.js"></script>
 </body>
 
 </html>

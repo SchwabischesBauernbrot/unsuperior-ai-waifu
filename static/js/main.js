@@ -1,3 +1,7 @@
+import * as helpers from "./helpers.js";
+import { DumbMemoryModule } from "./memory.js";
+
+
 const modelURL =
     "https://cdn.jsdelivr.net/gh/guansss/pixi-live2d-display/test/assets/shizuku/shizuku.model.json";
 
@@ -9,145 +13,128 @@ const startListeningAudioElement = new Audio("static/media/startListening.mp3");
 const pokeAudioElement = new Audio("static/media/poke.mp3");
 const bonkAudioElement = new Audio("static/media/bonk.mp3");
 
-var $name_label, $transcription;
-
-var disabled = true;
-
-const username = getURLParam("username") || "hackdaddy8000";
-const waifuName = getURLParam("name") || "Goku 3";
-const promptBase = getURLParam("prompt")
+const username = helpers.getURLParam("username") || "hackdaddy8000";
+const waifuName = helpers.getURLParam("name") || "Goku 3";
+const promptBase = helpers.getURLParam("prompt")
     || `You are a smug girl. You enjoy belittling people. 
     You love pointing out how much smarter you are than everyone. 
     You are currently hiding in your basement from the feds. 
     The feds are after you due to various cyber crimes. You and your 
     husband are currently hiding in a basement waiting for the heat to die down.`;
-const voice = getURLParam("voice") || "ja-JP-NanamiNeural";
+const voice = helpers.getURLParam("voice") || "ja-JP-NanamiNeural";
 
-const openAIKey = getURLParam("openai");
+const openAIKey = helpers.getURLParam("openai");
 if (openAIKey == null) {
-    alert("No OpenAI API key provided");
+    document.getElementById("warning").innerText += "ERROR: No OpenAI API Key given. Add it by passing it as a GET parameter called 'openai'\n";
+    $("#start-button").prop("disabled", true);
 }
 
-const subscriptionKey = getURLParam("speech_key");
-const serviceRegion = getURLParam("speech_region");
-if (subscriptionKey == null || serviceRegion == null) {
-    alert("No Azure speech key or service region");
+const subscriptionKey = helpers.getURLParam("speech_key");
+const serviceRegion = helpers.getURLParam("speech_region");
+const AZURE_POSSIBLE = subscriptionKey != null && serviceRegion != null;
+if (!AZURE_POSSIBLE) {
+    document.getElementById("warning").innerText += "WARNING: Azure speech is misconfigured. She will sound horrible + some features disabled. Fix it by passing a GET parameter called 'speech_key' for the API key and 'speech_region' for the azure region";
 }
-const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(subscriptionKey, serviceRegion);
-speechConfig.speechRecognitionLanguage = "en-US";
-const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
 
-var recognizer;
+$("#start-button").click(() => $('.overlay').delay(1500).fadeOut(800));
+
+////////////////////////////////////////////////////////////////////////////////////////////
+
+var speechConfig = null, audioConfig = null;
+if (AZURE_POSSIBLE) {
+    speechConfig = SpeechSDK.SpeechConfig.fromSubscription(subscriptionKey, serviceRegion);
+    speechConfig.speechRecognitionLanguage = "en-US";
+    audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
+}
+
+var $name_label, $transcription;
+function setUI(name, content) {
+    $name_label.text(name);
+    $transcription.text(content);
+}
+
+// Flag to make sure user doesn't interact with her while she's "thinking"
+var interactionDisabled = true;
+
 var synthesizer;
+const memory = new DumbMemoryModule(promptBase);
 
-const interactions = [];
-function buildPrompt(newPrompt) {
-    return promptBase + interactions.join("\n") + "\nMe:" + newPrompt + "\nYou: ";
-}
-function pushInteraction(prompt, response) {
-    if (interactions.length > 12) {
-        interactions.shift();
+/**
+ * Called when something happens that should prompt the waifu to "react". Poke, speak, webhook, etc.
+ * @param {*} getInteraction a function that takes a function as a parameter. getInteraction should pass the "interaction" into the function. 
+ */
+function onInteract(model, getInteraction) {
+    if (interactionDisabled) {
+        return;
     }
-    interactions.push(`Me: ${prompt}\nYou: ${response}`)
-}
+    interactionDisabled = true;
 
-function interact(synthesizer, userAction, onResults, onStartTalking) {
+    if (synthesizer != null) {
+        synthesizer.close(() => { });
+    }
+    synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig);
     const visemeAcc = [];
     synthesizer.visemeReceived = function (s, e) {
         visemeAcc.push(e);
     };
 
-    var prompt = buildPrompt(userAction);
-    openAIAPICompletionReq(openAIKey, prompt, function (response) {
-        pushInteraction(userAction, response);
-        disabled = false;
+    function callback(userPrompt) {
+        setUI(username, userPrompt);
 
-        $name_label.text(waifuName);
-        $transcription.text(response);
+        var fullTextGenerationPrompt = `${memory.buildPrompt()}\nMe: ${userPrompt}\nYou: `;
+        console.log(fullTextGenerationPrompt)
+        helpers.openAIAPICompletionReq(openAIKey, fullTextGenerationPrompt, function (waifuResponse) {
+            interactionDisabled = false;
 
-        // Try get emotion
-        emotionAnalysis(openAIKey, response, (emotion) => {
-            var data = {
-                "response": response,
-                "emotion": emotion,
-            };
-            onResults(data);
+            memory.pushMemory(`Me: ${userPrompt}\nYou: ${waifuResponse}`);
 
-            var ssml = createSsml(response, voice, emotion);
-            // Text to speech
-            synthesizer.speakSsmlAsync(
-                ssml,
-                function (result) {
-                    if (result.reason === SpeechSDK.ResultReason.Canceled) {
-                        console.log("synthesis failed. Error detail: " + result.errorDetails + "\n");
+            setUI(waifuName, waifuResponse);
+
+            // Try get emotion
+            helpers.emotionAnalysis(openAIKey, waifuResponse, (emotion) => {
+                var waifuExpression = helpers.emotion2ModelExpression(emotion);
+                model.internalModel.motionManager.expressionManager.setExpression(waifuExpression);
+
+                var ssml = helpers.createSsml(waifuResponse, voice, emotion);
+                // Text to speech
+                synthesizer.speakSsmlAsync(
+                    ssml,
+                    function (result) {
+                        if (result.reason === SpeechSDK.ResultReason.Canceled) {
+                            console.log("synthesis failed. Error detail: " + result.errorDetails + "\n");
+                        }
+                        var start = Date.now();
+                        for (let e of visemeAcc) {
+                            setTimeout(() => {
+                                helpers.setViseme(model, e.visemeId)
+                            }, e.audioOffset / 10000 - (Date.now() - start));
+                        }
+                        synthesizer.close();
+                        synthesizer = undefined;
+                    },
+                    function (err) {
+                        window.console.log(err);
+                        synthesizer.close();
+                        synthesizer = undefined;
                     }
-                    onStartTalking(visemeAcc);
-                    synthesizer.close();
-                    synthesizer = undefined;
-                },
-                function (err) {
-                    window.console.log(err);
-                    synthesizer.close();
-                    synthesizer = undefined;
-                }
-            );
+                );
+            });
         });
-    });
+    }
+
+    getInteraction(callback);
 }
 
-function voiceEvent(onStartListening, onLoading, onResults, onStartTalking) {
-    if (disabled) {
-        return;
-    } else {
-        disabled = true;
-    }
-    startListeningAudioElement.play();
-    $transcription.text("Listening...");
-    $name_label.text(username + ":");
-
-    onStartListening();
-
-    synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig);
-
-    recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
-    recognizer.recognizing = (s, e) => {
-        $transcription.text(e.result.text);
-    };
-
-    // Start listening
-    recognizer.recognizeOnceAsync(
-        function (result) {
-            onLoading()
-            $transcription.text(result.text);
-
-            interact(synthesizer, result.text, onResults, onStartTalking);
-
-            recognizer.close();
-            recognizer = undefined;
-        },
-        function (err) {
-            disabled = false;
-            $transcription.text(err);
-            window.console.log(err);
-
-            recognizer.close();
-            recognizer = undefined;
-        });
-};
-
 (async function main() {
-    $('.overlay').delay(1500).fadeOut(800);
-
     $name_label = $('#nametag');
     $transcription = $('#transcription');
 
     if (!!window.SpeechSDK) {
         SpeechSDK = window.SpeechSDK;
-        disabled = false;
+        interactionDisabled = false;
         console.log("Speech enabled");
     }
 
-    // Waifu stuff
     const app = new PIXI.Application({
         view: document.getElementById("canvas"),
         autoStart: true,
@@ -168,56 +155,45 @@ function voiceEvent(onStartListening, onLoading, onResults, onStartTalking) {
     onresize = (_) => resizeWaifu();
 
     $transcription.click(function () {
-        voiceEvent(function () {
-            model.internalModel.motionManager.expressionManager.setExpression(0);
-        }, function () {
+        onInteract(model, (callback) => {
+            startListeningAudioElement.play();
+            $transcription.text("Listening...");
+            $name_label.text(username + ":");
 
-        }, function (data) {
-            var emotion = data["emotion"];
-            model.internalModel.motionManager.expressionManager.setExpression(emotion2ModelExpression(emotion));
-        }, function (visemes) {
-            // Makes her mouth move according to the visemes
-            var start = Date.now();
-            for (let e of visemes) {
-                setTimeout(() => {
-                    setViseme(model, e.visemeId)
-                }, e.audioOffset / 10000 - (Date.now() - start));
-            }
-        })
+            var recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
+
+            recognizer.recognizing = (s, e) => {
+                $transcription.text(e.result.text);
+            };
+
+            recognizer.recognizeOnceAsync(
+                function (result) {
+                    $transcription.text(result.text);
+                    recognizer.close();
+                    recognizer = undefined;
+
+                    callback(result.text);
+                },
+                function (err) {
+                    $transcription.text(err);
+                    window.console.log(err);
+                    recognizer.close();
+                    recognizer = undefined;
+
+                    callback(null);
+                });
+        });
     });
 
     model.on('hit', (hitAreaNames) => {
-        if (disabled) {
-            return;
-        } else {
-            disabled = true;
-        }
-        if (hitAreaNames[0] == "head") {
-            bonkAudioElement.play();
-        } else {
-            pokeAudioElement.play();
-        }
-        synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig);
-        const visemeAcc = [];
-        synthesizer.visemeReceived = function (s, e) {
-            visemeAcc.push(e);
-        };
-        $name_label.text(username + ":");
-        let poke = `*pokes your ${hitAreaNames[0]}*`;
-        $transcription.text(poke);
-        interact(synthesizer, poke,
-            function (data) {
-                var emotion = data["emotion"];
-                model.internalModel.motionManager.expressionManager.setExpression(emotion2ModelExpression(emotion));
-            }, function (visemes) {
-                // Makes her mouth move according to the visemes
-                var start = Date.now();
-                for (let e of visemes) {
-                    setTimeout(() => {
-                        setViseme(model, e.visemeId)
-                    }, e.audioOffset / 10000 - (Date.now() - start));
-                }
+        onInteract(model, (callback) => {
+            var hitLocation = hitAreaNames[0];
+            if (hitLocation == "head") {
+                bonkAudioElement.play();
+            } else {
+                pokeAudioElement.play();
             }
-        );
+            callback(`*pokes your ${hitLocation}*`);
+        });
     });
 })();
