@@ -1,5 +1,4 @@
 .overlay {
-    opacity:0.8;
     background-color:#ccc;
     position:fixed;
     width:100%;
@@ -9,5 +8,4 @@
     z-index:1000;
 
     padding: 8px;
-    
 }

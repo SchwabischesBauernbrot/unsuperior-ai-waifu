@@ -1,5 +1,7 @@
 import * as helpers from "./helpers.js";
 import { DumbMemoryModule } from "./memory.js";
+import { TextToSpeechSynthesizerFactory } from "./speech.js";
+import { SpeechToTextRecognizerFactory } from "./speechrecognizer.js";
 
 
 const modelURL =
@@ -23,31 +25,61 @@ const promptBase = helpers.getURLParam("prompt")
     husband are currently hiding in a basement waiting for the heat to die down.`;
 const voice = helpers.getURLParam("voice") || "ja-JP-NanamiNeural";
 
+function addMessage(text, clas) {
+    var ul = document.getElementById("warning");
+    var li = document.createElement("li");
+    li.classList.add(clas);
+    li.appendChild(document.createTextNode(text));
+    ul.appendChild(li);
+}
+function addWarning(text) {
+    addMessage(text, "warning");
+}
+function addError(text) {
+    addMessage(text, "error");
+    $("#start-button").prop("disabled", true);
+}
+
 const openAIKey = helpers.getURLParam("openai");
 if (openAIKey == null) {
-    document.getElementById("warning").innerText += "ERROR: No OpenAI API Key given. Add it by passing it as a GET parameter called 'openai'\n";
-    $("#start-button").prop("disabled", true);
+    addError("ERROR: No OpenAI API Key given. Add it by passing it as a GET parameter called 'openai'");
 }
 
 const subscriptionKey = helpers.getURLParam("speech_key");
 const serviceRegion = helpers.getURLParam("speech_region");
-const AZURE_POSSIBLE = subscriptionKey != null && serviceRegion != null;
-if (!AZURE_POSSIBLE) {
-    document.getElementById("warning").innerText += "WARNING: Azure speech is misconfigured. She will sound horrible + some features disabled. Fix it by passing a GET parameter called 'speech_key' for the API key and 'speech_region' for the azure region";
+const AZURE_POSSIBLE = subscriptionKey != null && serviceRegion != null && !!window.SpeechSDK;
+const NATIVE_SPEECH_POSSIBLE = 'speechSynthesis' in window;
+const SPEECH_POSSIBLE = AZURE_POSSIBLE || NATIVE_SPEECH_POSSIBLE;
+if (!SPEECH_POSSIBLE) {
+    addWarning("WARNING: No speech options are available. She is a mute.");
+} else if (!AZURE_POSSIBLE) {
+    addWarning("WARNING: Azure speech is misconfigured. She will sound horrible + some features disabled. Fix it by passing a GET parameter called 'speech_key' for the API key and 'speech_region' for the azure region");
+} else if (!NATIVE_SPEECH_POSSIBLE) {
+    addWarning("WARNING: Native speech is not available. You must use Azure");
 }
 
-$("#start-button").click(() => $('.overlay').delay(1500).fadeOut(800));
+const NATIVE_SPEECH_RECOGNITION_POSSIBLE = "webkitSpeechRecognition" in window;
+const SPEECH_RECOGNITION_POSSIBLE = NATIVE_SPEECH_RECOGNITION_POSSIBLE || AZURE_POSSIBLE;
+if (!SPEECH_RECOGNITION_POSSIBLE) {
+    addWarning("WARNING: Speech recognition not available. She is deaf.");
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 
-var speechConfig = null, audioConfig = null;
-if (AZURE_POSSIBLE) {
-    speechConfig = SpeechSDK.SpeechConfig.fromSubscription(subscriptionKey, serviceRegion);
-    speechConfig.speechRecognitionLanguage = "en-US";
-    audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
+var ttsFactory; // Created in main()
+var sttFactory;
+if (NATIVE_SPEECH_RECOGNITION_POSSIBLE) {
+    sttFactory = SpeechToTextRecognizerFactory.JS("en");
+} else if (AZURE_POSSIBLE) {
+    sttFactory = SpeechToTextRecognizerFactory.Azure("en-US", subscriptionKey, serviceRegion);
+} else {
+    console.error("No speech recognizer built!");
 }
 
-var $name_label, $transcription;
+var $overlay = $('.overlay');
+$("#start-button").click(() => $overlay.delay(1500).fadeOut(800));
+
+var $name_label = $('#nametag'), $transcription = $('#transcription');
 function setUI(name, content) {
     $name_label.text(name);
     $transcription.text(content);
@@ -70,19 +102,14 @@ function onInteract(model, getInteraction) {
     interactionDisabled = true;
 
     if (synthesizer != null) {
-        synthesizer.close(() => { });
+        synthesizer.interrupt();
     }
-    synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig);
-    const visemeAcc = [];
-    synthesizer.visemeReceived = function (s, e) {
-        visemeAcc.push(e);
-    };
+    synthesizer = ttsFactory.build();
 
     function callback(userPrompt) {
         setUI(username, userPrompt);
 
         var fullTextGenerationPrompt = `${memory.buildPrompt()}\nMe: ${userPrompt}\nYou: `;
-        console.log(fullTextGenerationPrompt)
         helpers.openAIAPICompletionReq(openAIKey, fullTextGenerationPrompt, function (waifuResponse) {
             interactionDisabled = false;
 
@@ -90,34 +117,10 @@ function onInteract(model, getInteraction) {
 
             setUI(waifuName, waifuResponse);
 
-            // Try get emotion
             helpers.emotionAnalysis(openAIKey, waifuResponse, (emotion) => {
                 var waifuExpression = helpers.emotion2ModelExpression(emotion);
                 model.internalModel.motionManager.expressionManager.setExpression(waifuExpression);
-
-                var ssml = helpers.createSsml(waifuResponse, voice, emotion);
-                // Text to speech
-                synthesizer.speakSsmlAsync(
-                    ssml,
-                    function (result) {
-                        if (result.reason === SpeechSDK.ResultReason.Canceled) {
-                            console.log("synthesis failed. Error detail: " + result.errorDetails + "\n");
-                        }
-                        var start = Date.now();
-                        for (let e of visemeAcc) {
-                            setTimeout(() => {
-                                helpers.setViseme(model, e.visemeId)
-                            }, e.audioOffset / 10000 - (Date.now() - start));
-                        }
-                        synthesizer.close();
-                        synthesizer = undefined;
-                    },
-                    function (err) {
-                        window.console.log(err);
-                        synthesizer.close();
-                        synthesizer = undefined;
-                    }
-                );
+                synthesizer.speak(waifuResponse, emotion);
             });
         });
     }
@@ -126,15 +129,6 @@ function onInteract(model, getInteraction) {
 }
 
 (async function main() {
-    $name_label = $('#nametag');
-    $transcription = $('#transcription');
-
-    if (!!window.SpeechSDK) {
-        SpeechSDK = window.SpeechSDK;
-        interactionDisabled = false;
-        console.log("Speech enabled");
-    }
-
     const app = new PIXI.Application({
         view: document.getElementById("canvas"),
         autoStart: true,
@@ -142,10 +136,16 @@ function onInteract(model, getInteraction) {
     });
 
     const model = await PIXI.live2d.Live2DModel.from(modelURL);
-
     model.internalModel.motionManager.groups.idle = 'Idle';
-
     app.stage.addChild(model);
+
+    if (AZURE_POSSIBLE) {
+        ttsFactory = TextToSpeechSynthesizerFactory.Azure(model, "en-US", voice, subscriptionKey, serviceRegion);
+    } else if ('speechSynthesis' in window) {
+        ttsFactory = TextToSpeechSynthesizerFactory.JS(model, "en", voice);
+    } else {
+        ttsFactory = TextToSpeechSynthesizerFactory.Dummy();
+    }
 
     function resizeWaifu() {
         model.scale.set(window.innerHeight / 1280 * .8);
@@ -157,31 +157,26 @@ function onInteract(model, getInteraction) {
     $transcription.click(function () {
         onInteract(model, (callback) => {
             startListeningAudioElement.play();
-            $transcription.text("Listening...");
+            setUI(username, "Listening...");
             $name_label.text(username + ":");
 
-            var recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
+            let recognizer = sttFactory.build();
 
-            recognizer.recognizing = (s, e) => {
-                $transcription.text(e.result.text);
-            };
-
-            recognizer.recognizeOnceAsync(
-                function (result) {
-                    $transcription.text(result.text);
-                    recognizer.close();
-                    recognizer = undefined;
-
-                    callback(result.text);
+            recognizer.recognize(
+                (partialResult) => {
+                    setUI(username, partialResult);
                 },
-                function (err) {
-                    $transcription.text(err);
-                    window.console.log(err);
-                    recognizer.close();
+                (result, error) => {
+                    if (result) {
+                        $transcription.text(result);
+                    } else if (error) {
+                        $transcription.text(err);
+                        window.console.log(err);
+                    }
                     recognizer = undefined;
-
-                    callback(null);
-                });
+                    callback(result);
+                }
+            );
         });
     });
 
@@ -196,4 +191,7 @@ function onInteract(model, getInteraction) {
             callback(`*pokes your ${hitLocation}*`);
         });
     });
+
+    $overlay.css("opacity", .8);
+    interactionDisabled = false;
 })();

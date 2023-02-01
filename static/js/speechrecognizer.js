@@ -1,0 +1,77 @@
+class SpeechToTextRecognizerFactory {
+    static JS(lang) {
+        this.build = function () {
+            return new NativeSpeechToTextRecognizer(lang);
+        }
+        return this;
+    }
+    static Azure(lang, subscriptionKey, serviceRegion) {
+        const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(subscriptionKey, serviceRegion);
+        speechConfig.speechRecognitionLanguage = lang;
+        const audioConfig = window.SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
+        this.build = function () {
+            return new AzureSpeechToTextRecognizer(speechConfig, audioConfig);
+        }
+        return this;
+    }
+}
+class SpeechToTextRecognizer {
+    recognize(onPartialResult, callback) {
+        callback(null);
+    }
+}
+class NativeSpeechToTextRecognizer extends SpeechToTextRecognizer {
+    #recognizer;
+    constructor(lang) {
+        super();
+        let recognizer = new webkitSpeechRecognition();
+        this.#recognizer = recognizer;
+        recognizer.continuous = false;
+        recognizer.interimResults = true;
+        recognizer.lang = lang;
+    }
+    recognize(onPartialResult, callback) {
+        let recognizer = this.#recognizer;
+        // https://www.section.io/engineering-education/speech-recognition-in-javascript/
+        var transcript = "";
+        recognizer.onresult = (event) => {
+            transcript = event.results[0][0].transcript;
+            onPartialResult(transcript);
+        };
+        recognizer.onspeechend = function () {
+            recognizer.stop();
+            console.log(transcript);
+            callback(transcript);
+        }
+        this.#recognizer.start();
+    }
+}
+class AzureSpeechToTextRecognizer extends SpeechToTextRecognizer {
+    #recognizer;
+    constructor(speechConfig, audioConfig) {
+        super();
+        this.#recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
+    }
+    recognize(onPartialResult, callback) {
+        this.#recognizer.recognizing = (s, e) => {
+            onPartialResult(e.result.text);
+        };
+        this.#recognizer.recognizeOnceAsync(
+            function (result) {
+                recognizer.close();
+                recognizer = undefined;
+
+                callback(result.text, null);
+            },
+            function (err) {
+                window.console.log(err);
+                recognizer.close();
+                recognizer = undefined;
+
+                callback(null, err);
+            }
+        );
+    }
+}
+
+export { SpeechToTextRecognizerFactory };
