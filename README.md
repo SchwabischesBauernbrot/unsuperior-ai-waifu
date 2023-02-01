@@ -19,12 +19,12 @@ Open the index.html file in your modern browser OR use [this link](https://hackd
 
 You need to pass some paraemters to the page through GET variables in the URL.
 
-| GET Param     |                                                                                                                                       | Required? |
-|---------------|---------------------------------------------------------------------------------------------------------------------------------------|-----------|
-| openai        | Your OpenAI API key                                                                                                                   | yes       |
-| speech_key    | Your Microsoft Azure speech key                                                                                                       | yes       |
-| speech_region | Your Microsoft Azure speech region                                                                                                    | yes       |
-| username      | Your name (Purely cosmetic)                                                                                                           | no        |
-| name          | your waifu's name                                                                                                                     | no        |
-| prompt        | The base prompt that will be used when generating your waifu's dialogue. It should be a description of her, how she acts, talks, etc. | no        |
-| voice         | Azure TTS voice. See demo [here]() and see a full list of all available voices [here](https://d-id.readme.io/reference/microsoft-azure). They should be in the format {language}-{ID} ex: en-US-JennyNeural | no        |
+| GET Param     |                                                                          | Required? |
+|---------------|--------------------------------------------------------------------------|-----------|
+| openai        | Your OpenAI API key                                                      | yes       |
+| speech_key    | Your Microsoft Azure speech key                                          | no        |
+| speech_region | Your Microsoft Azure speech region                                       | no        |
+| username      | Your name (Purely cosmetic)                                              | no        |
+| name          | your waifu's name                                                        | no        |
+| prompt        | The base prompt that will be used when generating your waifu's dialogue. | no        |
+| voice         | Voice for TTS. Depends on whether or not you use Azure. See blog.        | no        |
