@@ -14,6 +14,12 @@ class SpeechToTextRecognizerFactory {
         }
         return this;
     }
+    static Deaf() {
+        this.build = function () {
+            return new DeafSpeechToTextRecognizer();
+        }
+        return this;
+    }
 }
 class SpeechToTextRecognizer {
     recognize(onPartialResult, callback) {
@@ -53,24 +59,32 @@ class AzureSpeechToTextRecognizer extends SpeechToTextRecognizer {
         this.#recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
     }
     recognize(onPartialResult, callback) {
+        let recognizer = this.#recognizer;
         this.#recognizer.recognizing = (s, e) => {
             onPartialResult(e.result.text);
         };
-        this.#recognizer.recognizeOnceAsync(
+        recognizer.recognizeOnceAsync(
             function (result) {
-                recognizer.close();
+                recognizer?.close();
                 recognizer = undefined;
 
                 callback(result.text, null);
             },
             function (err) {
                 window.console.log(err);
-                recognizer.close();
-                recognizer = undefined;
+                recognizer?.close();
 
                 callback(null, err);
             }
         );
+    }
+}
+class DeafSpeechToTextRecognizer extends SpeechToTextRecognizer {
+    constructor() {
+        super();
+    }
+    recognize(onPartialResult, callback) {
+        callback("*Incomprehensible because you are deaf*");
     }
 }
 

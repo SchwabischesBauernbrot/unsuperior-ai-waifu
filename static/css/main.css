@@ -63,7 +63,8 @@ html, body {
     position: absolute;
     bottom: 16px;
     width: 90%;
-    margin-left: 5%;
+    left: 50%;
+    transform: translate(-50%, 0)
 }
 
 .nametag {
@@ -94,12 +95,6 @@ html, body {
 }
 
 #transcription {
-    max-height: 15vh;
+    max-height: 10rem;
     overflow-y: scroll;
-}
-
-#name-label {
-    padding: 16px 32px;
-    margin-bottom: 4px;
-    width: fit-content;
 }
