@@ -96,9 +96,7 @@ class JSTextToSpeechSynthesizer extends TextToSpeechSynthesizer {
         this.#utterance.lang = lang;
 
         window.speechSynthesis.getVoices(); // Tells the browser to load the voices. Initially empty.
-        window.speechSynthesis.onvoiceschanged = function() { // Runs when the voices are loaded.
-            this.#model.voice = window.speechSynthesis.getVoices()[voice];
-        };
+        window.speechSynthesis.onvoiceschanged = () => this.#setVoice(voice); // Runs when the voices are loaded.
     }
     speak(text, emotion) {
         this.#utterance.text = text;
@@ -106,6 +104,9 @@ class JSTextToSpeechSynthesizer extends TextToSpeechSynthesizer {
     }
     interrupt() {
         window.speechSynthesis.cancel();
+    }
+    #setVoice(voice) {
+        this.#utterance.voice = window.speechSynthesis.getVoices()[voice];
     }
 }
 
