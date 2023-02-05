@@ -89,11 +89,17 @@ function openAIAPICompletionReq(key, prompt, callback) {
             'max_tokens': 70
         }),
         success: function (data) {
-            callback(data.choices[0].text);
+            callback(data.choices[0].text, null);
         },
         error: function (XMLHttpRequest, textStatus, errorThrown) {
-            console.log(textStatus, errorThrown);
-            callback(null);
+            console.error(XMLHttpRequest);
+            var err = `Error code ${XMLHttpRequest.status}.`;
+            if (XMLHttpRequest.status == 401) {
+                err += " It seems like your API key doesn't work. Was it entered correctly?"
+            } else if (XMLHttpRequest.status == 429) {
+                err += " You're talking to her too much. OpenAI doesn't like that. Slow down."
+            }
+            callback(null, err);
         },
     });
 }

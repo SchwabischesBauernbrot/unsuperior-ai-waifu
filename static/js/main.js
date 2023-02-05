@@ -69,7 +69,7 @@ const NATIVE_SPEECH_POSSIBLE = 'speechSynthesis' in window;
 const SPEECH_POSSIBLE = AZURE_POSSIBLE || NATIVE_SPEECH_POSSIBLE;
 var voiceEngine = engineOfChoice;
 if (helpers.isMobile() && engineOfChoice == "native") {
-    addWarning("WARNING: To my knowledge, native TTS and speech recognition does not work. Try to use Azure.");
+    addWarning("WARNING: To my knowledge, native TTS and speech recognition does not work on mobile. Try to use Azure.");
 }
 if (!SPEECH_POSSIBLE) {
     addWarning("WARNING: No speech options are available. She is a mute.");
@@ -144,7 +144,11 @@ function onInteract(model, getInteraction) {
         setUI(username, userPrompt);
 
         var fullTextGenerationPrompt = `${memory.buildPrompt()}\nMe: ${userPrompt}\nYou: `;
-        helpers.openAIAPICompletionReq(openAIKey, fullTextGenerationPrompt, function (waifuResponse) {
+        helpers.openAIAPICompletionReq(openAIKey, fullTextGenerationPrompt, function (waifuResponse, error) {
+            if (error != null) {
+                setUI("ERROR", error);
+                return;
+            }
             interactionDisabled = false;
 
             memory.pushMemory(`Me: ${userPrompt}\nYou: ${waifuResponse}`);
