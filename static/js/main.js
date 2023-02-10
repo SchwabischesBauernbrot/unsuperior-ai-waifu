@@ -46,7 +46,7 @@ if (modelData == null) {
 
 
 const username = helpers.getURLParam("username") || "hackdaddy8000";
-const waifuName = helpers.getURLParam("name") || "Goku 3";
+const waifuName = helpers.getURLParam("waifuname") || "Goku 3";
 const promptBase = helpers.getURLParam("prompt")
     || `You are a smug girl. You enjoy belittling people. 
     You love pointing out how much smarter you are than everyone. 
