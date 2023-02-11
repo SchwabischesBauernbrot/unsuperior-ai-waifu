@@ -1,5 +1,5 @@
 import * as helpers from "./helpers.js";
-import { DumbMemoryModule } from "./memory.js";
+import { APIAbuserAI, USAWServerAI } from "./ai.js";
 import { TextToSpeechSynthesizerFactory } from "./speech.js";
 import { SpeechToTextRecognizerFactory } from "./speechrecognizer.js";
 
@@ -57,8 +57,13 @@ const promptBase = helpers.getURLParam("prompt")
 const voice = helpers.getURLParam("voice");
 
 const openAIKey = helpers.getURLParam("openai");
-if (openAIKey == null) {
-    addError("ERROR: No OpenAI API Key given. Add it by passing it as a GET parameter called 'openai'");
+const usawServerURL = helpers.getURLParam("usaws");
+const AIPossible = openAIKey != null || usawServerURL != null;
+if (!AIPossible) {
+    addError("ERROR: No OpenAI API Key and no USAW server available. Either is required for her to think.");
+}
+if (openAIKey && usawServerURL) {
+    addWarning("WARNING: OpenAI API key and USAW server given. Defaulting to USAW");
 }
 
 const subscriptionKey = helpers.getURLParam("speech_key");
@@ -99,6 +104,15 @@ if (!SPEECH_RECOGNITION_POSSIBLE) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 
+var ai;
+if (usawServerURL) {
+    ai = new USAWServerAI(usawServerURL);
+} else if (openAIKey) {
+    ai = new APIAbuserAI(openAIKey, promptBase);
+} else {
+    ai = new AI();
+}
+
 var ttsFactory;
 if (voiceEngine == "azure") {
     ttsFactory = TextToSpeechSynthesizerFactory.Azure(model, "en-US", voice, subscriptionKey, serviceRegion);
@@ -135,7 +149,6 @@ function setUI(name, content) {
 var interactionDisabled = true;
 
 var synthesizer;
-const memory = new DumbMemoryModule(promptBase);
 
 /**
  * Called when something happens that should prompt the waifu to "react". Poke, speak, webhook, etc.
@@ -155,26 +168,24 @@ function onInteract(model, getInteraction) {
     function callback(userPrompt) {
         setUI(username, userPrompt);
 
-        var fullTextGenerationPrompt = `${memory.buildPrompt()}\nMe: ${userPrompt}\nYou: `;
-        helpers.openAIAPICompletionReq(openAIKey, fullTextGenerationPrompt, function (waifuResponse, error) {
+        ai.accept(userPrompt, function (response, error) {
             if (error != null) {
                 setUI("ERROR", error);
                 return;
             }
             interactionDisabled = false;
 
-            memory.pushMemory(`Me: ${userPrompt}\nYou: ${waifuResponse}`);
-
+            let waifuResponse = response["response"];
+            let waifuEmotion = response["emotion"]; 
             setUI(waifuName, waifuResponse);
 
-            helpers.emotionAnalysis(openAIKey, waifuResponse, (emotion) => {
-                var waifuExpression = modelData["emotionMap"][emotion] ?? 0;
-                model.internalModel.motionManager.expressionManager.setExpression(waifuExpression);
-                synthesizer.speak(waifuResponse, emotion);
-            });
+            var waifuExpression = modelData["emotionMap"][waifuEmotion] ?? 0;
+            model.internalModel.motionManager.expressionManager.setExpression(waifuExpression);
+            synthesizer.speak(waifuResponse, waifuEmotion);
         });
     }
 
+    interactionDisabled = true;
     getInteraction(callback);
 }
 
