@@ -26,23 +26,24 @@ function addError(text) {
     $("#start-button").prop("disabled", true);
 }
 
-const model = helpers.getURLParam("model");
+const modelChoice = helpers.getURLParam("model");
 const modelsRaw = await fetch('models.json');
 const modelsJSON = await modelsRaw.json();
 var modelData;
-if (model == null || model == "") {
+if (modelChoice == null || modelChoice == "") {
     modelData = structuredClone(modelsJSON[0]);
 } else {
     for (let m of modelsJSON) {
-        if (m["name"] == model) {
+        if (m["name"] == modelChoice) {
             modelData = m;
             break;
         }
     }
 }
 if (modelData == null) {
-    addError("ERROR: Unknown model " + model);
+    addError("ERROR: Unknown model " + modelChoice);
 }
+const model = await PIXI.live2d.Live2DModel.from(modelData["url"]);
 
 
 const username = helpers.getURLParam("username") || "hackdaddy8000";
@@ -98,7 +99,16 @@ if (!SPEECH_RECOGNITION_POSSIBLE) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 
-var ttsFactory; // Created in main()
+var ttsFactory;
+if (voiceEngine == "azure") {
+    ttsFactory = TextToSpeechSynthesizerFactory.Azure(model, "en-US", voice, subscriptionKey, serviceRegion);
+} else if (voiceEngine == "native") {
+    ttsFactory = TextToSpeechSynthesizerFactory.JS(model, "en", voice);
+} else if (voiceEngine == null) {
+    ttsFactory = TextToSpeechSynthesizerFactory.Dummy();
+} else {
+    console.error("voiceEngine illegal state!", voiceEngine);
+}
 var sttFactory;
 if (speechRecognitionEngine == "native") {
     sttFactory = SpeechToTextRecognizerFactory.JS("en");
@@ -109,6 +119,8 @@ if (speechRecognitionEngine == "native") {
 } else {
     console.error("Illegal speechRecognitionEngine state!", speechRecognitionEngine);
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////
 
 var $overlay = $('.overlay');
 $("#start-button").click(() => $overlay.fadeOut(800));
@@ -179,19 +191,8 @@ function onInteract(model, getInteraction) {
         resizeTo: window
     });
 
-    const model = await PIXI.live2d.Live2DModel.from(modelData["url"]);
     model.internalModel.motionManager.groups.idle = modelData["idleMotionGroupName"] ?? "Idle";
     app.stage.addChild(model);
-
-    if (voiceEngine == "azure") {
-        ttsFactory = TextToSpeechSynthesizerFactory.Azure(model, "en-US", voice, subscriptionKey, serviceRegion);
-    } else if (voiceEngine == "native") {
-        ttsFactory = TextToSpeechSynthesizerFactory.JS(model, "en", voice);
-    } else if (voiceEngine == null) {
-        ttsFactory = TextToSpeechSynthesizerFactory.Dummy();
-    } else {
-        console.error("voiceEngine illegal state!", voiceEngine);
-    }
 
     function resizeWaifu() {
         // I just messed with the numbers until it centered her properly
