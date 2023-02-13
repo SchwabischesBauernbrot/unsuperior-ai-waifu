@@ -1,5 +1,7 @@
 # unsuperior-ai-waifu
 
+![Demo](doc/demo.gif)
+
 Neuro-sama knockoff that runs completely in your browser. Should run on anything, but the page layout is janky on anything but a mobile phone.
 
 ## Features
@@ -18,18 +20,34 @@ Neuro-sama knockoff that runs completely in your browser. Should run on anything
 
 Open the index.html file in your modern browser OR use [this link](https://hackdaddy.dev/unsuperior-ai-waifu)
 
-You need to pass some paraemters to the page through GET variables in the URL.
+You need to pass some parameters to the page through GET variables in the URL. Example:
 
-| GET Param     |                                                                          | Required? |
-|---------------|--------------------------------------------------------------------------|-----------|
-| openai        | Your OpenAI API key                                                      | yes       |
-| speech_key    | Your Microsoft Azure speech key                                          | no        |
-| speech_region | Your Microsoft Azure speech region                                       | no        |
+`https://hackdaddy.dev/usaw/?openai=sk-12345&engine=native&model=shizuki&prompt=She%20loves%20me%20even%20though%20I%27m%20not%20funny`
+
+### Logic
+
+Choose one of the following
+
+| GET Param     |                                                                          |
+|---------------|--------------------------------------------------------------------------|
+| openai        | Your OpenAI API key                                                      |
+| usaws         | URL to USAW server endpoint                                              |
+
+### Speech
+
+| GET Param     |                                                                          | Required?         |
+|---------------|--------------------------------------------------------------------------|-------------------|
+| engine        | What is used for speech recognition + TTS. Choose "azure" or "native.    | default "native"  |
+| speech_key    | Your Microsoft Azure speech key                                          | if engine="azure" |
+| speech_region | Your Microsoft Azure speech region                                       | if engine="azure" |
+| voice         | Voice for TTS. Depends on whether or not you use Azure. See blog.        | no                |
+
+### Customization
+
+| model         | Name of waifu model. See `/models.json`                                  | yes       |
 | username      | Your name (Purely cosmetic)                                              | no        |
 | name          | your waifu's name                                                        | no        |
-| prompt        | The base prompt that will be used when generating your waifu's dialogue. | no        |
-| voice         | Voice for TTS. Depends on whether or not you use Azure. See blog.        | no        |
-| model         | live2D model + metadata. See `/models.json`                              | no        |
+| prompt        | The base prompt that will be used when generating your waifu's dialogue. | yes       |
 
 ## How to add your own model
 
@@ -56,7 +74,9 @@ Available models are defined in `models.json`.
     }
 },
 ```
+
 This is what a `.model.json` file looks like:
+
 ```json
 {
   ...,
@@ -82,6 +102,7 @@ This is what a `.model.json` file looks like:
   }
 }
 ```
+
 `idleMotionGroup` will play one of the "idle" motions when she idles.
 `emotionMap` will show the respective expression when she feels an emotion. For example, if she feels `anger`, she will show the expression at index 2: "f03". Expressions are zero-indexed meaning "f01" is at index 0, "f01" is at index 1, etc.
 
