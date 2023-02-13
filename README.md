@@ -44,6 +44,8 @@ Choose one of the following
 
 ### Customization
 
+| GET Param     |                                                                          | Required? |
+|---------------|--------------------------------------------------------------------------|-----------|
 | model         | Name of waifu model. See `/models.json`                                  | yes       |
 | username      | Your name (Purely cosmetic)                                              | no        |
 | name          | your waifu's name                                                        | no        |
