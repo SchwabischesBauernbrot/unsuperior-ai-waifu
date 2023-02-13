@@ -12,6 +12,20 @@ function emotion2SsmlStyle(emotion) {
     if (emotion == null) {
         style = "General";
     } else {
+        const emotionToEkman = {
+            "neutral": ["neutral"],
+            "anger": ["anger", "annoyance", "disapproval"],
+            "disgust": ["disgust"],
+            "fear": ["fear", "nervousness"],
+            "joy": ["joy", "amusement", "approval", "excitement", "gratitude", "love", "optimism", "relief", "pride", "admiration", "desire", "caring"],
+            "sadness": ["sadness", "disappointment", "embarrassment", "grief", "remorse"],
+            "surprise": ["surprise", "realization", "confusion", "curiosity"]
+        };
+        for (let e in emotionToEkman) {
+            if (emotionToEkman[e].includes(emotion)) {
+                emotion = e;
+            }
+        }
         const emotionToSsmlStyleMap = {
             "neutral": "General",
             "anger": "Angry",

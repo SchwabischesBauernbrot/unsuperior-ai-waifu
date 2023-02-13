@@ -3,6 +3,8 @@ import { APIAbuserAI, USAWServerAI } from "./ai.js";
 import { TextToSpeechSynthesizerFactory } from "./speech.js";
 import { SpeechToTextRecognizerFactory } from "./speechrecognizer.js";
 
+//const background_model_url = "https://cdn.jsdelivr.net/gh/Eikanya/Live2d-model/%E5%B0%91%E5%A5%B3%E5%89%8D%E7%BA%BF%20girls%20Frontline/live2dold/bg/cg1/model.json";
+const background_model_url = "https://cdn.jsdelivr.net/gh/Eikanya/Live2d-model/%E5%B0%91%E5%A5%B3%E5%89%8D%E7%BA%BF%20girls%20Frontline/live2dold/bg/cg7/model.json";
 /**
  * Siri sound. There is a delay between when you tap and when it starts transcripting. 
  * This sound helps make people wait for it to start transcripting.
@@ -43,7 +45,13 @@ if (modelChoice == null || modelChoice == "") {
 if (modelData == null) {
     addError("ERROR: Unknown model " + modelChoice);
 }
-const model = await PIXI.live2d.Live2DModel.from(modelData["url"]);
+
+let models = {
+    model: await PIXI.live2d.Live2DModel.from(modelData["url"]),
+    background_model: await PIXI.live2d.Live2DModel.from(background_model_url)
+}
+let model = models["model"];
+let background_model = models["background_model"];
 
 
 const username = helpers.getURLParam("username") || "hackdaddy8000";
@@ -176,11 +184,12 @@ function onInteract(model, getInteraction) {
             interactionDisabled = false;
 
             let waifuResponse = response["response"];
-            let waifuEmotion = response["emotion"]; 
+            let waifuEmotion = response["emotion"];
             setUI(waifuName, waifuResponse);
 
             var waifuExpression = modelData["emotionMap"][waifuEmotion] ?? 0;
             model.internalModel.motionManager.expressionManager.setExpression(waifuExpression);
+            model.motion("tap");
             synthesizer.speak(waifuResponse, waifuEmotion);
         });
     }
@@ -202,6 +211,15 @@ function onInteract(model, getInteraction) {
         resizeTo: window
     });
 
+    app.stage.addChild(background_model);
+
+    function resizeBackground() {
+        let scale = Math.max(window.innerHeight * .00048, window.innerWidth * .00027);
+        background_model.scale.set(scale);
+        background_model.x = -200;
+    }
+    resizeBackground();
+
     model.internalModel.motionManager.groups.idle = modelData["idleMotionGroupName"] ?? "Idle";
     app.stage.addChild(model);
 
@@ -213,7 +231,10 @@ function onInteract(model, getInteraction) {
         model.y = modelData["kYOffset"] ?? 0;
     }
     resizeWaifu();
-    onresize = (_) => resizeWaifu();
+    onresize = (_) => {
+        resizeBackground();
+        resizeWaifu();
+    };
 
     $transcription.click(function () {
         onInteract(model, (callback) => {
