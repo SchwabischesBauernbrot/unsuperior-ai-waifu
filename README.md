@@ -14,6 +14,11 @@ Neuro-sama knockoff that runs completely in your browser. Should run on anything
 * Choose her accent
 * She has emotional voices (she can sound happy, sad, etc)
 
+## Goals
+
+* I want this project to be easy to use by most people. Ideally, all people should have to do is sign up for some websites, get API keys, and fill out the form on my website.
+* It should be easy to host for me. This is a bunch of static HTML/CSS/JS files so I can easily host it on GH pages.
+
 ## How to use
 
 [See article for detailed guide on how to set this up](https://hackdaddy.dev/blog/unsuperior-ai-waifu/)
