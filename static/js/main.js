@@ -78,6 +78,10 @@ const subscriptionKey = helpers.getURLParam("speech_key");
 const serviceRegion = helpers.getURLParam("speech_region");
 
 const engineOfChoice = helpers.getURLParam("engine") || "native";
+
+const deaf = helpers.getURLParam("deaf") != null;
+const mute = helpers.getURLParam("mute") != null;
+
 const AZURE_POSSIBLE = subscriptionKey != null && serviceRegion != null && !!window.SpeechSDK;
 const NATIVE_SPEECH_POSSIBLE = 'speechSynthesis' in window;
 const SPEECH_POSSIBLE = AZURE_POSSIBLE || NATIVE_SPEECH_POSSIBLE;
@@ -85,7 +89,11 @@ var voiceEngine = engineOfChoice;
 if (helpers.isMobile() && engineOfChoice == "native") {
     addWarning("WARNING: To my knowledge, native TTS and speech recognition does not work on mobile. Try to use Azure.");
 }
-if (!SPEECH_POSSIBLE) {
+
+if(mute) {
+    addWarning("WARNING: You have forced her to be mute. She will not speak.");
+    voiceEngine = null;
+} else if (!SPEECH_POSSIBLE) {
     addWarning("WARNING: No speech options are available. She is a mute.");
     voiceEngine = null;
 } else if (engineOfChoice == "azure" && !AZURE_POSSIBLE) {
@@ -99,8 +107,11 @@ if (!SPEECH_POSSIBLE) {
 const NATIVE_SPEECH_RECOGNITION_POSSIBLE = "webkitSpeechRecognition" in window;
 const SPEECH_RECOGNITION_POSSIBLE = NATIVE_SPEECH_RECOGNITION_POSSIBLE || AZURE_POSSIBLE;
 var speechRecognitionEngine = engineOfChoice;
-if (!SPEECH_RECOGNITION_POSSIBLE) {
-    addWarning("WARNING: Speech recognition not available. She is deaf.");
+if (deaf) {
+    addWarning("WARNING: You have forced her to be deaf. You can communicate with her by typing.");
+    speechRecognitionEngine = null;
+} else if (!SPEECH_RECOGNITION_POSSIBLE) {
+    addWarning("WARNING: Speech recognition not available. She is switching to text input mode.");
     speechRecognitionEngine = null;
 } else if (engineOfChoice == "azure" && !AZURE_POSSIBLE) {
     // Already has a warning message from voice

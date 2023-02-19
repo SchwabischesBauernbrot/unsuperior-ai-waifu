@@ -16,7 +16,7 @@ class SpeechToTextRecognizerFactory {
     }
     static Deaf() {
         this.build = function () {
-            return new DeafSpeechToTextRecognizer();
+            return new ManualTextInputRecognizer();
         }
         return this;
     }
@@ -79,12 +79,20 @@ class AzureSpeechToTextRecognizer extends SpeechToTextRecognizer {
         );
     }
 }
-class DeafSpeechToTextRecognizer extends SpeechToTextRecognizer {
+class ManualTextInputRecognizer extends SpeechToTextRecognizer {
     constructor() {
         super();
+        transcription.innerText = "";
+        transcription.contentEditable = true;
+        transcription.focus();
     }
     recognize(onPartialResult, callback) {
-        callback("*Incomprehensible because you are deaf*");
+        transcription.onkeydown = function (e) {
+            if (e.key == "Enter") {
+                transcription.contentEditable = false;
+                callback(transcription.innerText);
+            }
+        }
     }
 }
 
