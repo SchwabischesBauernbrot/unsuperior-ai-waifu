@@ -27,6 +27,12 @@ class TextToSpeechSynthesizerFactory {
         }
         return this;
     }
+    static Text() {
+        this.build = function() {
+            return new TextToSpeechSynthesizer();
+        }
+        return this;
+    }
 }
 class TextToSpeechSynthesizer {
     /*

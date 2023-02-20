@@ -85,40 +85,37 @@ const mute = helpers.getURLParam("mute") != null;
 const AZURE_POSSIBLE = subscriptionKey != null && serviceRegion != null && !!window.SpeechSDK;
 const NATIVE_SPEECH_POSSIBLE = 'speechSynthesis' in window;
 const SPEECH_POSSIBLE = AZURE_POSSIBLE || NATIVE_SPEECH_POSSIBLE;
-var voiceEngine = engineOfChoice;
+var voiceEngine = helpers.getURLParam("tts-engine") || engineOfChoice;
 if (helpers.isMobile() && engineOfChoice == "native") {
     addWarning("WARNING: To my knowledge, native TTS and speech recognition does not work on mobile. Try to use Azure.");
 }
 
-if(mute) {
-    addWarning("WARNING: You have forced her to be mute. She will not speak.");
-    voiceEngine = null;
-} else if (!SPEECH_POSSIBLE) {
+if (!SPEECH_POSSIBLE) {
     addWarning("WARNING: No speech options are available. She is a mute.");
     voiceEngine = null;
-} else if (engineOfChoice == "azure" && !AZURE_POSSIBLE) {
+} else if (voiceEngine == "azure" && !AZURE_POSSIBLE) {
     addWarning("WARNING: Azure speech is misconfigured. Trying to fall back on native. Fix it by passing a GET parameter called 'speech_key' for the API key and 'speech_region' for the azure region");
     voiceEngine = "native";
-} else if (engineOfChoice == "native" && !NATIVE_SPEECH_POSSIBLE) {
+} else if (voiceEngine == "native" && !NATIVE_SPEECH_POSSIBLE) {
     addWarning("WARNING: Native TTS is not available. You must use Azure. No voice - she is now a mute.");
+    voiceEngine = null;
+} else if (voiceEngine == "text") {
+    addWarning("WARNING: Text mode is enabled. She will not speak. You can change this by passing a GET parameter called 'tts-engine' or 'engine' with the value 'native' or 'azure'.");
     voiceEngine = null;
 }
 
 const NATIVE_SPEECH_RECOGNITION_POSSIBLE = "webkitSpeechRecognition" in window;
 const SPEECH_RECOGNITION_POSSIBLE = NATIVE_SPEECH_RECOGNITION_POSSIBLE || AZURE_POSSIBLE;
-var speechRecognitionEngine = engineOfChoice;
-if (deaf) {
-    addWarning("WARNING: You have forced her to be deaf. You can communicate with her by typing.");
-    speechRecognitionEngine = null;
-} else if (!SPEECH_RECOGNITION_POSSIBLE) {
+var speechRecognitionEngine = helpers.getURLParam("sr-engine") || engineOfChoice;
+if (!SPEECH_RECOGNITION_POSSIBLE) {
     addWarning("WARNING: Speech recognition not available. She is switching to text input mode.");
-    speechRecognitionEngine = null;
-} else if (engineOfChoice == "azure" && !AZURE_POSSIBLE) {
+    speechRecognitionEngine = "text";
+} else if (speechRecognitionEngine == "azure" && !AZURE_POSSIBLE) {
     // Already has a warning message from voice
     speechRecognitionEngine = null;
-} else if (engineOfChoice == "native" && !NATIVE_SPEECH_RECOGNITION_POSSIBLE) {
-    addWarning("WARNING: Native speech recognition is not available. You must use Azure. No hearing - she is now deaf.");
-    speechRecognitionEngine = null;
+} else if (speechRecognitionEngine == "native" && !NATIVE_SPEECH_RECOGNITION_POSSIBLE) {
+    addWarning("WARNING: Native speech recognition is not available. You must use Azure. No hearing - falling back on text input.");
+    speechRecognitionEngine = "text";
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -147,8 +144,9 @@ if (speechRecognitionEngine == "native") {
     sttFactory = SpeechToTextRecognizerFactory.JS("en");
 } else if (speechRecognitionEngine == "azure") {
     sttFactory = SpeechToTextRecognizerFactory.Azure("en-US", subscriptionKey, serviceRegion);
-} else if (speechRecognitionEngine == null) {
-    sttFactory = SpeechToTextRecognizerFactory.Deaf();
+} else if (speechRecognitionEngine == "text") {
+    sttFactory = SpeechToTextRecognizerFactory.TextInputRecognizer();
+    $('#transcription').text("Type your message here...");
 } else {
     console.error("Illegal speechRecognitionEngine state!", speechRecognitionEngine);
 }
@@ -249,10 +247,11 @@ function onInteract(model, getInteraction) {
 
     $transcription.click(function () {
         onInteract(model, (callback) => {
-            startListeningAudioElement.play();
-            setUI(username, "Listening...");
+            if(speechRecognitionEngine != "text") {
+                startListeningAudioElement.play();
+                setUI(username, "Listening...");
+            }
             $name_label.text(username + ":");
-
             let recognizer = sttFactory.build();
 
             recognizer.recognize(

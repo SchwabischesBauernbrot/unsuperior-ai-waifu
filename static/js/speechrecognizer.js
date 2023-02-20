@@ -14,9 +14,9 @@ class SpeechToTextRecognizerFactory {
         }
         return this;
     }
-    static Deaf() {
+    static TextInputRecognizer() {
         this.build = function () {
-            return new ManualTextInputRecognizer();
+            return new TextInputRecognizer();
         }
         return this;
     }
@@ -79,7 +79,7 @@ class AzureSpeechToTextRecognizer extends SpeechToTextRecognizer {
         );
     }
 }
-class ManualTextInputRecognizer extends SpeechToTextRecognizer {
+class TextInputRecognizer extends SpeechToTextRecognizer {
     constructor() {
         super();
         transcription.innerText = "";
