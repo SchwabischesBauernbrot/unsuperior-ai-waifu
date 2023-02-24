@@ -118,6 +118,11 @@ if (!SPEECH_RECOGNITION_POSSIBLE) {
     speechRecognitionEngine = "text";
 }
 
+const sttAzureLang = helpers.getURLParam("stt_language") || "en-US";
+if (voiceEngine != "azure" && sttAzureLang != "en-US") {
+    addWarning("WARNING: Using different languages for speech-to-text is only available with the Azure engine. Defaulting to english.");
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////
 
 var ai;
@@ -143,7 +148,7 @@ var sttFactory;
 if (speechRecognitionEngine == "native") {
     sttFactory = SpeechToTextRecognizerFactory.JS("en");
 } else if (speechRecognitionEngine == "azure") {
-    sttFactory = SpeechToTextRecognizerFactory.Azure("en-US", subscriptionKey, serviceRegion);
+    sttFactory = SpeechToTextRecognizerFactory.Azure(sttAzureLang, subscriptionKey, serviceRegion);
 } else if (speechRecognitionEngine == "text") {
     sttFactory = SpeechToTextRecognizerFactory.TextInputRecognizer();
     $('#transcription').text("Type your message here...");
