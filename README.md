@@ -18,18 +18,23 @@ Neuro-sama knockoff that runs completely in your browser. Should run on anything
 
 * I want this project to be easy to use by most people. Ideally, all people should have to do is sign up for some websites, get API keys, and fill out the form on my website.
 * It should be easy to host for me. This is a bunch of static HTML/CSS/JS files so I can easily host it on GH pages.
+* It should be pretty cross-platform. I don't want to have to maintain a bunch of different versions of this for everyone.
 
 ## How to use
 
-[See article for detailed guide on how to set this up](https://hackdaddy.dev/blog/unsuperior-ai-waifu/)
+[If you just want to use this program, use this link](https://hackdaddy.dev/blog/unsuperior-ai-waifu/)
 
-Open the index.html file in your modern browser OR use [this link](https://hackdaddy.dev/unsuperior-ai-waifu)
+### For Devs
 
-You need to pass some parameters to the page through GET variables in the URL. Example:
+If you want to make changes to the code and test them out, you need to create a web server in order serve the project files. Modern browsers will not allow access to the microphone and other permissions otherwise. It must either be localhost, or through HTTPS from a remote host (no HTTP).
+
+This program takes many parameters as GET parameterss through the URL. Example:
 
 `https://hackdaddy.dev/usaw/?openai=sk-12345&engine=native&model=shizuki&prompt=She%20loves%20me%20even%20though%20I%27m%20not%20funny`
 
-### Logic
+### Parameters
+
+#### Logic
 
 Choose one of the following
 
@@ -38,16 +43,17 @@ Choose one of the following
 | openai        | Your OpenAI API key                                                      |
 | usaws         | URL to USAW server endpoint                                              |
 
-### Speech
+#### Speech
 
 | GET Param     |                                                                          | Required?         |
 |---------------|--------------------------------------------------------------------------|-------------------|
-| engine        | What is used for speech recognition + TTS. Choose "azure" or "native.    | default "native"  |
+| sr-engine     | Speech recognition engine. Choose "azure", "native", or "text" (type).   | default "text"    |
+| tts-engine    | Text To Speech Egnine. Choose "azure", "native", or "text" (disabled).   | default "text"    |
 | speech_key    | Your Microsoft Azure speech key                                          | if engine="azure" |
 | speech_region | Your Microsoft Azure speech region                                       | if engine="azure" |
 | voice         | Voice for TTS. Depends on whether or not you use Azure. See blog.        | no                |
 
-### Customization
+#### Customization
 
 | GET Param     |                                                                          | Required? |
 |---------------|--------------------------------------------------------------------------|-----------|
